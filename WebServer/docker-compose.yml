@@ -1,0 +1,84 @@
+name: webserver-stack
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: webserver_nginx
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./www:/usr/share/nginx/html
+      - ./www:/var/www/html:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/logs:/var/log/nginx
+    depends_on:
+      - php
+    networks:
+      - webapp-network
+
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+      network: host
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    extra_hosts:
+      - "httpredir.debian.org:151.101.0.204"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - ./www:/var/www/html:rw
+      - ./docker/php/conf.d/custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    networks:
+      - webapp-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: webserver_mysql
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mydatabase}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - webapp-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: webserver_phpmyadmin
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - webapp-network
+
+networks:
+  webapp-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
