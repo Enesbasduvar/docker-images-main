@@ -18,7 +18,7 @@ A production-ready Docker stack optimized for modern web applications, featuring
 
 ```bash
 # Clone repository
-git clone [repository-url]
+git clone https://github.com/Enesbasduvar/docker-images-main.git
 cd WebServer
 
 # Start services
